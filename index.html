@@ -115,21 +115,53 @@
   .emp-link:hover { text-decoration: underline; }
   .emp-link svg { width: 11px; height: 11px; flex-shrink: 0; }
 
-  /* Org chart */
-  .org-canvas { padding: 24px; overflow-x: auto; }
-  .org-tree { display: flex; flex-direction: column; align-items: center; min-width: max-content; }
-  .org-level { display: flex; gap: 14px; justify-content: center; }
-  .org-node {
-    background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
-    padding: 10px 14px; text-align: center; min-width: 140px; max-width: 170px;
+  /* Org chart — vertikálny outline */
+  .org-canvas { padding: 24px 32px; overflow-x: hidden; }
+  .org-list { list-style: none; padding: 0; margin: 0; }
+  .org-list .org-list { margin-left: 28px; padding-left: 0; border-left: 1.5px solid var(--border2); }
+  .org-item { position: relative; }
+  .org-list .org-list .org-item::before {
+    content: ''; position: absolute; left: -28px; top: 22px;
+    width: 20px; height: 1.5px; background: var(--border2);
   }
-  .org-node.root { border-color: var(--accent); border-width: 1.5px; }
-  .org-node .n { font-size: 12px; font-weight: 500; }
-  .org-node .r { font-size: 11px; color: var(--text2); margin-top: 2px; }
-  .org-vline { width: 1px; height: 22px; background: var(--border2); margin: 0 auto; }
-  .org-hline { height: 1px; background: var(--border2); }
-  .org-section { display: flex; flex-direction: column; align-items: center; }
-  .org-children { display: flex; gap: 14px; }
+  .org-row {
+    display: flex; align-items: center; gap: 10px;
+    padding: 8px 0;
+  }
+  .org-dept-dot {
+    width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0;
+  }
+  .org-card {
+    display: flex; align-items: center; gap: 10px;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 9px 14px;
+    min-width: 220px; max-width: 340px;
+  }
+  .org-card.is-root { border-color: var(--accent); border-width: 1.5px; }
+  .org-avatar {
+    width: 32px; height: 32px; border-radius: 50%; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px; font-weight: 500; font-family: 'DM Mono', monospace;
+  }
+  .org-info { min-width: 0; }
+  .org-name {
+    font-size: 13px; font-weight: 500; cursor: pointer; color: var(--accent);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .org-name:hover { text-decoration: underline; }
+  .org-role { font-size: 11px; color: var(--text2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .org-dept-badge {
+    font-size: 10px; padding: 2px 7px; border-radius: 20px;
+    font-family: 'DM Mono', monospace; white-space: nowrap; flex-shrink: 0;
+  }
+  .org-toggle {
+    margin-left: auto; width: 20px; height: 20px; flex-shrink: 0;
+    border: 1px solid var(--border); border-radius: 4px; background: var(--bg);
+    cursor: pointer; display: flex; align-items: center; justify-content: center;
+    font-size: 13px; color: var(--text3); line-height: 1; user-select: none;
+  }
+  .org-toggle:hover { background: var(--surface2); }
+  .org-collapsed > .org-list { display: none; }
 
   /* Admin table */
   .admin-section { margin-bottom: 28px; }
@@ -611,29 +643,43 @@ function empCardHtml(e){
   </div>`;
 }
 
-// ── Org chart ─────────────────────────────────────────────────────────────────
+// ── Org chart — vertikálny outline ────────────────────────────────────────────
 function renderOrg(){
-  if(!emps.length){document.getElementById('org-content').innerHTML='<div class="spinner">Žiadni zamestnanci</div>';return;}
+  const el=document.getElementById('org-content');
+  if(!emps.length){el.innerHTML='<div class="spinner">Žiadni zamestnanci</div>';return;}
   const root=emps.find(e=>!e.manager)||emps[0];
-  function nodeHtml(e,isRoot){
-    const d=getDept(e.dept); const c=getColor(d?d.color:'gray');
-    return `<div class="org-node${isRoot?' root':''}"${isRoot?` style="border-color:${c.border||c.bg}"`:''}>
-      <div class="n" onclick="window.jumpToEmp('${e.id}')" style="cursor:pointer;color:var(--accent)">${e.name}</div>
-      <div class="r">${e.role||''}</div></div>`;
+
+  function buildItem(e, isRoot){
+    const d=getDept(e.dept);
+    const c=getColor(d?d.color:'gray');
+    const children=emps.filter(x=>x.manager===e.id);
+    const hasChildren=children.length>0;
+    const avg=initials(e.name);
+
+    const card=`<div class="org-card${isRoot?' is-root':''}">
+      <div class="org-avatar" style="background:${c.bg};color:${c.text}">${avg}</div>
+      <div class="org-info">
+        <div class="org-name" onclick="window.jumpToEmp('${e.id}')">${e.name||''}</div>
+        <div class="org-role">${e.role||''}</div>
+      </div>
+      ${d?`<span class="org-dept-badge" style="background:${c.bg};color:${c.text}">${d.name}</span>`:''}
+      ${hasChildren?`<div class="org-toggle" onclick="toggleOrg(this)" title="Rozbaliť/Zbaliť">−</div>`:''}
+    </div>`;
+
+    const sub=hasChildren
+      ? `<ul class="org-list">${children.map(ch=>buildItem(ch,false)).join('')}</ul>`
+      : '';
+
+    return `<li class="org-item"><div class="org-row">${card}</div>${sub}</li>`;
   }
-  function buildLevel(pid){
-    const ch=emps.filter(e=>e.manager===pid);
-    if(!ch.length) return '';
-    const items=ch.map(c=>{
-      const sub=buildLevel(c.id);
-      return `<div class="org-section">${nodeHtml(c,false)}${sub?'<div class="org-vline"></div>'+sub:''}</div>`;
-    }).join('');
-    return `<div style="display:flex;flex-direction:column;align-items:center">
-      ${ch.length>1?'<div class="org-vline"></div><div class="org-hline" style="width:calc(100% - 140px)"></div>':''}
-      <div class="org-level">${items}</div></div>`;
-  }
-  document.getElementById('org-content').innerHTML=
-    `<div class="org-tree"><div class="org-section">${nodeHtml(root,true)}<div class="org-vline"></div>${buildLevel(root.id)}</div></div>`;
+
+  el.innerHTML=`<ul class="org-list">${buildItem(root,true)}</ul>`;
+}
+
+window.toggleOrg = function(btn){
+  const item=btn.closest('.org-item');
+  const collapsed=item.classList.toggle('org-collapsed');
+  btn.textContent=collapsed?'+':'−';
 }
 
 // ── Admin tables ──────────────────────────────────────────────────────────────
