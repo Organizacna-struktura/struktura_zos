@@ -115,53 +115,106 @@
   .emp-link:hover { text-decoration: underline; }
   .emp-link svg { width: 11px; height: 11px; flex-shrink: 0; }
 
-  /* Org chart — vertikálny outline */
-  .org-canvas { padding: 24px 32px; overflow-x: hidden; }
-  .org-list { list-style: none; padding: 0; margin: 0; }
-  .org-list .org-list { margin-left: 28px; padding-left: 0; border-left: 1.5px solid var(--border2); }
-  .org-item { position: relative; }
-  .org-list .org-list .org-item::before {
-    content: ''; position: absolute; left: -28px; top: 22px;
-    width: 20px; height: 1.5px; background: var(--border2);
+  /* Org chart — hybrid H/V */
+  .org-canvas { padding: 28px 32px; overflow-x: auto; }
+
+  /* Vertikálna vetva — deti pod sebou s čiarou vľavo */
+  .org-v-children {
+    margin-left: 24px;
+    padding-left: 16px;
+    border-left: 1.5px solid var(--border2);
+    margin-top: 4px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
   }
-  .org-row {
-    display: flex; align-items: center; gap: 10px;
-    padding: 8px 0;
+  .org-v-item { position: relative; }
+  .org-v-item::before {
+    content:''; position:absolute; left:-16px; top:20px;
+    width:12px; height:1.5px; background:var(--border2);
   }
-  .org-dept-dot {
-    width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0;
+
+  /* Horizontálna vetva — deti vedľa seba */
+  .org-h-wrap {
+    margin-top: 8px;
+    margin-left: 24px;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0;
   }
+  .org-h-connector-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 0;
+  }
+  .org-h-vline-down {
+    width: 1.5px;
+    height: 16px;
+    background: var(--border2);
+    margin-left: 20px;
+  }
+  .org-h-tee {
+    display: flex;
+    align-items: flex-start;
+    position: relative;
+  }
+  .org-h-hline {
+    height: 1.5px;
+    background: var(--border2);
+    align-self: flex-start;
+    margin-top: 20px;
+    min-width: 10px;
+  }
+  .org-h-items {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 10px;
+    align-items: flex-start;
+  }
+  .org-h-item {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .org-h-item-vline {
+    width: 1.5px;
+    height: 16px;
+    background: var(--border2);
+    margin-left: 20px;
+  }
+
+  /* Spoločná karta */
   .org-card {
-    display: flex; align-items: center; gap: 10px;
+    display: inline-flex; align-items: center; gap: 9px;
     background: var(--surface); border: 1px solid var(--border);
-    border-radius: var(--radius); padding: 9px 14px;
-    min-width: 220px; max-width: 340px;
+    border-radius: var(--radius); padding: 8px 12px;
+    min-width: 180px; max-width: 280px;
+    cursor: default;
   }
   .org-card.is-root { border-color: var(--accent); border-width: 1.5px; }
   .org-avatar {
-    width: 32px; height: 32px; border-radius: 50%; flex-shrink: 0;
+    width: 30px; height: 30px; border-radius: 50%; flex-shrink: 0;
     display: flex; align-items: center; justify-content: center;
     font-size: 11px; font-weight: 500; font-family: 'DM Mono', monospace;
   }
-  .org-info { min-width: 0; }
+  .org-info { min-width: 0; flex: 1; }
   .org-name {
-    font-size: 13px; font-weight: 500; cursor: pointer; color: var(--accent);
+    font-size: 12px; font-weight: 500; cursor: pointer; color: var(--accent);
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   }
   .org-name:hover { text-decoration: underline; }
-  .org-role { font-size: 11px; color: var(--text2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .org-dept-badge {
-    font-size: 10px; padding: 2px 7px; border-radius: 20px;
-    font-family: 'DM Mono', monospace; white-space: nowrap; flex-shrink: 0;
-  }
+  .org-role { font-size: 10px; color: var(--text2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 1px; }
   .org-toggle {
-    margin-left: auto; width: 20px; height: 20px; flex-shrink: 0;
+    width: 18px; height: 18px; flex-shrink: 0;
     border: 1px solid var(--border); border-radius: 4px; background: var(--bg);
     cursor: pointer; display: flex; align-items: center; justify-content: center;
-    font-size: 13px; color: var(--text3); line-height: 1; user-select: none;
+    font-size: 12px; color: var(--text3); line-height: 1; user-select: none; font-family: monospace;
   }
-  .org-toggle:hover { background: var(--surface2); }
-  .org-collapsed > .org-list { display: none; }
+  .org-toggle:hover { background: var(--surface2); color: var(--text); }
+  .org-collapsed > .org-v-children,
+  .org-collapsed > .org-h-wrap { display: none; }
 
   /* Admin table */
   .admin-section { margin-bottom: 28px; }
@@ -416,6 +469,15 @@
     <div class="form-grid full">
       <div class="field"><label>POZNÁMKA / OBLASŤ</label><textarea id="f-note" placeholder="napr. zodpovedný za ŽKV 660, oblasť zvárania..." style="width:100%;padding:8px 11px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;font-size:13px;resize:vertical;min-height:60px;outline:none"></textarea></div>
     </div>
+    <div class="form-grid full">
+      <div class="field">
+        <label>PODRIADENÍ V ORG-CHARTE</label>
+        <select id="f-childLayout" style="width:100%">
+          <option value="vertical">Vertikálne — pod sebou (odporúčané pre vedúcich)</option>
+          <option value="horizontal">Horizontálne — vedľa seba (odporúčané pre rovnocenné pozície)</option>
+        </select>
+      </div>
+    </div>
     <div class="modal-actions">
       <button class="btn-cancel" onclick="closeModal('overlay-emp')">Zrušiť</button>
       <button class="btn-save" onclick="saveEmp()">Uložiť</button>
@@ -643,43 +705,72 @@ function empCardHtml(e){
   </div>`;
 }
 
-// ── Org chart — vertikálny outline ────────────────────────────────────────────
+// ── Org chart — hybrid H/V ────────────────────────────────────────────────────
 function renderOrg(){
   const el=document.getElementById('org-content');
   if(!emps.length){el.innerHTML='<div class="spinner">Žiadni zamestnanci</div>';return;}
   const root=emps.find(e=>!e.manager)||emps[0];
 
-  function buildItem(e, isRoot){
-    const d=getDept(e.dept);
-    const c=getColor(d?d.color:'gray');
+  function card(e, isRoot){
+    const d=getDept(e.dept); const c=getColor(d?d.color:'gray');
     const children=emps.filter(x=>x.manager===e.id);
-    const hasChildren=children.length>0;
-    const avg=initials(e.name);
-
-    const card=`<div class="org-card${isRoot?' is-root':''}">
-      <div class="org-avatar" style="background:${c.bg};color:${c.text}">${avg}</div>
+    const hasKids=children.length>0;
+    return `<div class="org-card${isRoot?' is-root':''}" data-id="${e.id}">
+      <div class="org-avatar" style="background:${c.bg};color:${c.text}">${initials(e.name)}</div>
       <div class="org-info">
         <div class="org-name" onclick="window.jumpToEmp('${e.id}')">${e.name||''}</div>
         <div class="org-role">${e.role||''}</div>
       </div>
-      ${d?`<span class="org-dept-badge" style="background:${c.bg};color:${c.text}">${d.name}</span>`:''}
-      ${hasChildren?`<div class="org-toggle" onclick="toggleOrg(this)" title="Rozbaliť/Zbaliť">−</div>`:''}
+      ${hasKids?`<div class="org-toggle" onclick="toggleOrg(this)">−</div>`:''}
     </div>`;
-
-    const sub=hasChildren
-      ? `<ul class="org-list">${children.map(ch=>buildItem(ch,false)).join('')}</ul>`
-      : '';
-
-    return `<li class="org-item"><div class="org-row">${card}</div>${sub}</li>`;
   }
 
-  el.innerHTML=`<ul class="org-list">${buildItem(root,true)}</ul>`;
+  function buildNode(e, isRoot){
+    const children=emps.filter(x=>x.manager===e.id);
+    const layout=e.childLayout||'vertical';
+    const hasKids=children.length>0;
+
+    const cardHtml=card(e, isRoot);
+
+    if(!hasKids) return `<div>${cardHtml}</div>`;
+
+    if(layout==='horizontal'){
+      // Horizontálne: deti vedľa seba, spojené čiarou zhora
+      const itemsHtml=children.map(ch=>{
+        const sub=buildNode(ch, false);
+        return `<div class="org-h-item">
+          <div class="org-h-item-vline"></div>
+          ${sub}
+        </div>`;
+      }).join('');
+      const childrenBlock=`<div class="org-h-wrap">
+        <div class="org-h-vline-down"></div>
+        <div class="org-h-tee">
+          <div class="org-h-items">${itemsHtml}</div>
+        </div>
+      </div>`;
+      return `<div>${cardHtml}${childrenBlock}</div>`;
+    } else {
+      // Vertikálne: deti pod sebou
+      const childrenBlock=`<div class="org-v-children">
+        ${children.map(ch=>`<div class="org-v-item">${buildNode(ch,false)}</div>`).join('')}
+      </div>`;
+      return `<div>${cardHtml}${childrenBlock}</div>`;
+    }
+  }
+
+  el.innerHTML=`<div style="padding-bottom:24px">${buildNode(root,true)}</div>`;
 }
 
 window.toggleOrg = function(btn){
-  const item=btn.closest('.org-item');
-  const collapsed=item.classList.toggle('org-collapsed');
-  btn.textContent=collapsed?'+':'−';
+  const card=btn.closest('.org-card');
+  const wrap=card.parentElement;
+  // nájdi prvý súrodenský children blok
+  const sub=wrap.querySelector('.org-v-children, .org-h-wrap');
+  if(!sub) return;
+  const collapsed=sub.style.display==='none';
+  sub.style.display=collapsed?'':'none';
+  btn.textContent=collapsed?'−':'+';
 }
 
 // ── Admin tables ──────────────────────────────────────────────────────────────
@@ -753,6 +844,7 @@ window.openEmpModal = function(id=null){
       document.getElementById('f-note').value=e.note||'';
       document.getElementById('f-dept').value=e.dept||'';
       document.getElementById('f-manager').value=e.manager||'';
+      document.getElementById('f-childLayout').value=e.childLayout||'vertical';
       const phones=e.phones||[];
       if(!phones.length && e.phone) phones.push({type:'Mobil',number:e.phone});
       if(phones.length) phones.forEach(p=>addPhoneRow(p.type,p.number));
@@ -776,7 +868,8 @@ window.saveEmp = async function(){
     email:document.getElementById('f-email').value.trim(),
     note:document.getElementById('f-note').value.trim(),
     phones:getPhoneRows(),
-    phone:null
+    phone:null,
+    childLayout:document.getElementById('f-childLayout').value||'vertical'
   };
   try{
     if(editEmpId){ await db.collection('employees').doc(editEmpId).update(data); showToast('Uložené'); }
