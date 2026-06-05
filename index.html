@@ -1,0 +1,757 @@
+<!DOCTYPE html>
+<html lang="sk">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Firemná štruktúra</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #f5f4f0;
+    --surface: #ffffff;
+    --surface2: #f0efe9;
+    --border: #e0ddd5;
+    --border2: #ccc9be;
+    --text: #1a1917;
+    --text2: #6b6860;
+    --text3: #a09e99;
+    --accent: #2d5be3;
+    --accent-bg: #eef1fc;
+    --danger: #c0392b;
+    --danger-bg: #fdf0ee;
+    --success: #1a7a4a;
+    --success-bg: #edf7f2;
+    --radius: 10px;
+    --radius-sm: 6px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); font-size: 14px; min-height: 100vh; }
+
+  /* Layout */
+  .app { display: flex; min-height: 100vh; }
+  .sidebar {
+    width: 220px; min-width: 220px; background: var(--surface);
+    border-right: 1px solid var(--border); display: flex; flex-direction: column;
+    position: sticky; top: 0; height: 100vh;
+  }
+  .sidebar-brand {
+    padding: 22px 20px 18px; border-bottom: 1px solid var(--border);
+  }
+  .sidebar-brand .company { font-size: 15px; font-weight: 500; letter-spacing: -0.2px; }
+  .sidebar-brand .tagline { font-size: 11px; color: var(--text3); margin-top: 2px; font-family: 'DM Mono', monospace; }
+  .nav { padding: 10px 8px; flex: 1; }
+  .nav-item {
+    display: flex; align-items: center; gap: 10px; padding: 9px 12px;
+    border-radius: var(--radius-sm); font-size: 13px; cursor: pointer;
+    color: var(--text2); transition: all .15s; margin-bottom: 2px; user-select: none;
+  }
+  .nav-item:hover { background: var(--surface2); color: var(--text); }
+  .nav-item.active { background: var(--accent-bg); color: var(--accent); font-weight: 500; }
+  .nav-item svg { width: 16px; height: 16px; flex-shrink: 0; }
+  .sidebar-footer {
+    padding: 12px 8px; border-top: 1px solid var(--border);
+  }
+  .admin-badge {
+    display: flex; align-items: center; gap: 8px; padding: 8px 12px;
+    border-radius: var(--radius-sm); font-size: 12px; font-family: 'DM Mono', monospace;
+  }
+  .admin-badge.logged { color: var(--success); background: var(--success-bg); }
+  .admin-badge.out { color: var(--text3); cursor: pointer; }
+  .admin-badge.out:hover { background: var(--surface2); }
+
+  .main { flex: 1; display: flex; flex-direction: column; overflow-x: hidden; }
+
+  /* Topbar */
+  .topbar {
+    background: var(--surface); border-bottom: 1px solid var(--border);
+    padding: 14px 24px; display: flex; align-items: center; gap: 12px;
+    position: sticky; top: 0; z-index: 5;
+  }
+  .topbar-title { font-size: 15px; font-weight: 500; }
+  .topbar-subtitle { font-size: 12px; color: var(--text3); font-family: 'DM Mono', monospace; }
+  .search-wrap { margin-left: auto; display: flex; align-items: center; gap: 8px; }
+  .search {
+    padding: 7px 12px; border: 1px solid var(--border); border-radius: var(--radius-sm);
+    background: var(--bg); font-family: 'DM Sans', sans-serif; font-size: 13px;
+    color: var(--text); width: 220px; outline: none; transition: border-color .15s;
+  }
+  .search:focus { border-color: var(--accent); }
+  .btn-add {
+    display: flex; align-items: center; gap: 6px; padding: 8px 14px;
+    background: var(--accent); color: #fff; border: none; border-radius: var(--radius-sm);
+    font-size: 13px; font-family: 'DM Sans', sans-serif; cursor: pointer; font-weight: 500; transition: opacity .15s;
+  }
+  .btn-add:hover { opacity: 0.88; }
+
+  /* Content */
+  .content { padding: 24px; flex: 1; }
+  .spinner { text-align: center; padding: 60px; color: var(--text3); font-family: 'DM Mono', monospace; font-size: 13px; }
+
+  /* Directory */
+  .dept-block { margin-bottom: 32px; }
+  .dept-header { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
+  .dept-pill {
+    font-size: 11px; font-weight: 500; padding: 3px 10px; border-radius: 20px;
+    font-family: 'DM Mono', monospace; letter-spacing: 0.3px;
+  }
+  .dept-head-name { font-size: 13px; color: var(--text2); }
+  .dept-count { font-size: 12px; color: var(--text3); margin-left: auto; }
+  .cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 10px; }
+  .emp-card {
+    background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 14px; transition: border-color .15s;
+  }
+  .emp-card:hover { border-color: var(--border2); }
+  .emp-avatar {
+    width: 38px; height: 38px; border-radius: 50%; display: flex; align-items: center;
+    justify-content: center; font-size: 13px; font-weight: 500; margin-bottom: 10px;
+    font-family: 'DM Mono', monospace;
+  }
+  .emp-name { font-size: 13px; font-weight: 500; margin-bottom: 2px; }
+  .emp-role { font-size: 11px; color: var(--text2); margin-bottom: 10px; }
+  .emp-links { display: flex; flex-direction: column; gap: 4px; }
+  .emp-link { font-size: 11px; color: var(--accent); text-decoration: none; display: flex; align-items: center; gap: 5px; }
+  .emp-link:hover { text-decoration: underline; }
+  .emp-link svg { width: 11px; height: 11px; flex-shrink: 0; }
+
+  /* Org chart */
+  .org-canvas { padding: 24px; overflow-x: auto; }
+  .org-tree { display: flex; flex-direction: column; align-items: center; min-width: max-content; }
+  .org-level { display: flex; gap: 14px; justify-content: center; }
+  .org-node {
+    background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 10px 14px; text-align: center; min-width: 140px; max-width: 170px;
+  }
+  .org-node.root { border-color: var(--accent); border-width: 1.5px; }
+  .org-node .n { font-size: 12px; font-weight: 500; }
+  .org-node .r { font-size: 11px; color: var(--text2); margin-top: 2px; }
+  .org-vline { width: 1px; height: 22px; background: var(--border2); margin: 0 auto; }
+  .org-hline { height: 1px; background: var(--border2); }
+  .org-section { display: flex; flex-direction: column; align-items: center; }
+  .org-children { display: flex; gap: 14px; }
+
+  /* Admin table */
+  .admin-section { margin-bottom: 28px; }
+  .admin-toolbar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+  .admin-label { font-size: 13px; font-weight: 500; }
+  .table-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th { text-align: left; padding: 10px 14px; font-size: 11px; font-weight: 500; color: var(--text3); border-bottom: 1px solid var(--border); background: var(--surface2); font-family: 'DM Mono', monospace; letter-spacing: 0.5px; }
+  td { padding: 10px 14px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: var(--bg); }
+  .td-actions { display: flex; gap: 6px; justify-content: flex-end; }
+  .btn-icon {
+    display: flex; align-items: center; gap: 5px; padding: 5px 10px;
+    border: 1px solid var(--border); border-radius: var(--radius-sm);
+    background: transparent; font-size: 12px; font-family: 'DM Sans', sans-serif;
+    cursor: pointer; color: var(--text2); transition: all .15s;
+  }
+  .btn-icon:hover { background: var(--surface2); }
+  .btn-icon.del { color: var(--danger); border-color: #f0c8c4; }
+  .btn-icon.del:hover { background: var(--danger-bg); }
+  .btn-icon svg { width: 13px; height: 13px; }
+  .badge-dept {
+    font-size: 11px; padding: 2px 8px; border-radius: 20px; font-family: 'DM Mono', monospace; display: inline-block;
+  }
+
+  /* Modal */
+  .overlay {
+    display: none; position: fixed; inset: 0; background: rgba(0,0,0,.35); z-index: 100;
+    align-items: center; justify-content: center;
+  }
+  .overlay.open { display: flex; }
+  .modal {
+    background: var(--surface); border-radius: var(--radius); border: 1px solid var(--border);
+    padding: 24px; width: 440px; max-width: 95vw;
+  }
+  .modal-title { font-size: 15px; font-weight: 500; margin-bottom: 18px; }
+  .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
+  .form-grid.full { grid-template-columns: 1fr; }
+  .field label { display: block; font-size: 11px; color: var(--text3); margin-bottom: 5px; font-family: 'DM Mono', monospace; letter-spacing: 0.4px; }
+  .field input, .field select {
+    width: 100%; padding: 8px 11px; border: 1px solid var(--border);
+    border-radius: var(--radius-sm); background: var(--bg); color: var(--text);
+    font-family: 'DM Sans', sans-serif; font-size: 13px; outline: none; transition: border-color .15s;
+  }
+  .field input:focus, .field select:focus { border-color: var(--accent); }
+  .modal-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 18px; }
+  .btn-cancel {
+    padding: 8px 16px; border: 1px solid var(--border); border-radius: var(--radius-sm);
+    background: transparent; font-family: 'DM Sans', sans-serif; font-size: 13px;
+    cursor: pointer; color: var(--text2);
+  }
+  .btn-cancel:hover { background: var(--surface2); }
+  .btn-save {
+    padding: 8px 18px; background: var(--accent); color: #fff; border: none;
+    border-radius: var(--radius-sm); font-family: 'DM Sans', sans-serif; font-size: 13px;
+    font-weight: 500; cursor: pointer; transition: opacity .15s;
+  }
+  .btn-save:hover { opacity: 0.88; }
+
+  /* Toast */
+  .toast {
+    position: fixed; bottom: 24px; right: 24px; background: var(--text); color: #fff;
+    padding: 10px 18px; border-radius: var(--radius-sm); font-size: 13px; font-family: 'DM Mono', monospace;
+    opacity: 0; transform: translateY(8px); transition: all .25s; pointer-events: none; z-index: 200;
+  }
+  .toast.show { opacity: 1; transform: translateY(0); }
+
+  /* Login screen */
+  .login-screen {
+    display: flex; align-items: center; justify-content: center;
+    min-height: 100vh; background: var(--bg);
+  }
+  .login-box {
+    background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 32px; width: 340px; text-align: center;
+  }
+  .login-box h2 { font-size: 16px; font-weight: 500; margin-bottom: 6px; }
+  .login-box p { font-size: 12px; color: var(--text3); margin-bottom: 20px; font-family: 'DM Mono', monospace; }
+  .login-box input {
+    width: 100%; padding: 10px 14px; border: 1px solid var(--border); border-radius: var(--radius-sm);
+    background: var(--bg); font-family: 'DM Mono', monospace; font-size: 18px; letter-spacing: 6px;
+    text-align: center; color: var(--text); outline: none; margin-bottom: 12px; transition: border-color .15s;
+  }
+  .login-box input:focus { border-color: var(--accent); }
+  .login-box button {
+    width: 100%; padding: 10px; background: var(--accent); color: #fff; border: none;
+    border-radius: var(--radius-sm); font-family: 'DM Sans', sans-serif; font-size: 14px;
+    font-weight: 500; cursor: pointer;
+  }
+  .login-error { font-size: 12px; color: var(--danger); margin-top: 8px; display: none; }
+
+  /* Config screen */
+  .config-screen {
+    display: flex; align-items: center; justify-content: center;
+    min-height: 100vh; background: var(--bg);
+  }
+  .config-box {
+    background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 32px; width: 480px; max-width: 95vw;
+  }
+  .config-box h2 { font-size: 16px; font-weight: 500; margin-bottom: 6px; }
+  .config-box p { font-size: 12px; color: var(--text3); margin-bottom: 22px; font-family: 'DM Mono', monospace; }
+  .config-field { margin-bottom: 14px; }
+  .config-field label { display: block; font-size: 11px; color: var(--text3); margin-bottom: 5px; font-family: 'DM Mono', monospace; }
+  .config-field input {
+    width: 100%; padding: 9px 12px; border: 1px solid var(--border); border-radius: var(--radius-sm);
+    background: var(--bg); font-family: 'DM Mono', monospace; font-size: 13px; color: var(--text); outline: none;
+  }
+  .config-field input:focus { border-color: var(--accent); }
+  .config-note { font-size: 11px; color: var(--text3); margin-top: 4px; }
+  .config-btn {
+    width: 100%; padding: 11px; background: var(--accent); color: #fff; border: none;
+    border-radius: var(--radius-sm); font-family: 'DM Sans', sans-serif; font-size: 14px;
+    font-weight: 500; cursor: pointer; margin-top: 6px;
+  }
+
+  /* Color palette for depts */
+  .c-blue   { background: #deeaf9; color: #1a3d7a; }
+  .c-teal   { background: #d5f0e6; color: #0e5038; }
+  .c-purple { background: #eae8fd; color: #3a2d8a; }
+  .c-coral  { background: #fde8e2; color: #7a2a14; }
+  .c-amber  { background: #fdefd4; color: #6b3c08; }
+  .c-gray   { background: #edecea; color: #3d3c39; }
+  .c-pink   { background: #fbe5ef; color: #7a2346; }
+  .c-green  { background: #e0f0d4; color: #2a5e12; }
+</style>
+</head>
+<body>
+
+
+
+<!-- Login screen -->
+<div class="login-screen" id="login-screen" style="display:none">
+  <div class="login-box">
+    <h2>Admin prístup</h2>
+    <p>Zadaj heslo pre editáciu</p>
+    <input type="password" id="pin-input" placeholder="••••" maxlength="20" onkeydown="if(event.key==='Enter')checkPin()">
+    <button onclick="checkPin()">Potvrdiť</button>
+    <div class="login-error" id="login-error">Nesprávne heslo</div>
+  </div>
+</div>
+
+<!-- Main app -->
+<div class="app" id="main-app" style="display:none">
+  <div class="sidebar">
+    <div class="sidebar-brand">
+      <div class="company" id="company-name">Firma</div>
+      <div class="tagline">org. štruktúra</div>
+    </div>
+    <nav class="nav">
+      <div class="nav-item active" id="nav-dir" onclick="showView('directory')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        Adresár
+      </div>
+      <div class="nav-item" id="nav-org" onclick="showView('org')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="6" height="4" rx="1"/><rect x="15" y="3" width="6" height="4" rx="1"/><rect x="9" y="17" width="6" height="4" rx="1"/><path d="M6 7v4h12V7M12 11v6"/></svg>
+        Org-chart
+      </div>
+      <div class="nav-item" id="nav-adm" onclick="adminClick()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2z"/><path d="M12 8v4l3 3"/></svg>
+        Admin
+      </div>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="admin-badge" id="admin-status-badge" style="display:none">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+        Admin
+      </div>
+      <div class="admin-badge out" id="logout-btn" onclick="logout()" style="display:none">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+        Odhlásiť
+      </div>
+    </div>
+  </div>
+
+  <div class="main">
+    <!-- Directory view -->
+    <div id="view-directory">
+      <div class="topbar">
+        <div><div class="topbar-title">Adresár zamestnancov</div></div>
+        <div class="search-wrap">
+          <input class="search" type="text" placeholder="Hľadať meno, rola..." id="search-input" oninput="renderDirectory()">
+        </div>
+      </div>
+      <div class="content" id="dir-content"><div class="spinner">Načítavam...</div></div>
+    </div>
+
+    <!-- Org chart view -->
+    <div id="view-org" style="display:none">
+      <div class="topbar">
+        <div class="topbar-title">Organizačná štruktúra</div>
+      </div>
+      <div class="org-canvas" id="org-content"><div class="spinner">Načítavam...</div></div>
+    </div>
+
+    <!-- Admin view -->
+    <div id="view-admin" style="display:none">
+      <div class="topbar">
+        <div class="topbar-title">Správa</div>
+        <div style="margin-left:auto;display:flex;gap:8px">
+          <button class="btn-add" onclick="openEmpModal()">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            Zamestnanec
+          </button>
+          <button class="btn-add" onclick="openDeptModal()" style="background:var(--surface);color:var(--accent);border:1px solid var(--accent)">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            Oddelenie
+          </button>
+        </div>
+      </div>
+      <div class="content">
+        <div class="admin-section">
+          <div class="admin-label" style="margin-bottom:12px">Zamestnanci</div>
+          <div class="table-wrap"><table>
+            <thead><tr><th>Meno</th><th>Oddelenie</th><th>Rola</th><th>Email</th><th>Telefón</th><th></th></tr></thead>
+            <tbody id="emp-tbody"></tbody>
+          </table></div>
+        </div>
+        <div class="admin-section">
+          <div class="admin-label" style="margin-bottom:12px">Oddelenia</div>
+          <div class="table-wrap"><table>
+            <thead><tr><th>Názov</th><th>Farba</th><th>Vedúci</th><th>Počet</th><th></th></tr></thead>
+            <tbody id="dept-tbody"></tbody>
+          </table></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Employee modal -->
+<div class="overlay" id="overlay-emp">
+  <div class="modal" style="width:520px">
+    <div class="modal-title" id="emp-modal-title">Nový zamestnanec</div>
+    <div class="form-grid">
+      <div class="field"><label>MENO A PRIEZVISKO</label><input id="f-name" placeholder="Ján Novák"></div>
+      <div class="field"><label>ROLA / POZÍCIA</label><input id="f-role" placeholder="Technológ"></div>
+    </div>
+    <div class="form-grid">
+      <div class="field"><label>ODDELENIE</label><select id="f-dept"></select></div>
+      <div class="field"><label>NADRIADENÝ</label><select id="f-manager"></select></div>
+    </div>
+    <div class="form-grid full">
+      <div class="field"><label>EMAIL</label><input id="f-email" type="email" placeholder="jan@firma.sk"></div>
+    </div>
+    <div class="field" style="margin-bottom:12px">
+      <label>TELEFÓNNE ČÍSLA</label>
+      <div id="phones-list" style="display:flex;flex-direction:column;gap:6px;margin-top:2px"></div>
+      <button type="button" onclick="addPhoneRow()" style="margin-top:7px;padding:5px 12px;border:1px dashed var(--border2);border-radius:var(--radius-sm);background:transparent;color:var(--text2);font-size:12px;cursor:pointer;font-family:'DM Sans',sans-serif">+ Pridať číslo</button>
+    </div>
+    <div class="form-grid full">
+      <div class="field"><label>POZNÁMKA / OBLASŤ</label><textarea id="f-note" placeholder="napr. zodpovedný za ŽKV 660, oblasť zvárania..." style="width:100%;padding:8px 11px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;font-size:13px;resize:vertical;min-height:60px;outline:none"></textarea></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeModal('overlay-emp')">Zrušiť</button>
+      <button class="btn-save" onclick="saveEmp()">Uložiť</button>
+    </div>
+  </div>
+</div>
+
+<!-- Dept modal -->
+<div class="overlay" id="overlay-dept">
+  <div class="modal">
+    <div class="modal-title">Nové oddelenie</div>
+    <div class="form-grid full">
+      <div class="field"><label>NÁZOV ODDELENIA</label><input id="d-name" placeholder="Výroba"></div>
+    </div>
+    <div class="form-grid">
+      <div class="field"><label>FARBA</label>
+        <select id="d-color">
+          <option value="blue">Modrá</option><option value="teal">Zelená</option>
+          <option value="purple">Fialová</option><option value="coral">Červená</option>
+          <option value="amber">Žltá</option><option value="gray">Sivá</option>
+          <option value="pink">Ružová</option><option value="green">Tmavo zelená</option>
+        </select>
+      </div>
+      <div class="field"><label>VEDÚCI (meno)</label><input id="d-head" placeholder="Peter Kováč"></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeModal('overlay-dept')">Zrušiť</button>
+      <button class="btn-save" onclick="saveDept()">Uložiť</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<!-- Firebase SDK compat — funguje aj cez file:// aj GitHub Pages -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<script>
+// ── CONFIG ────────────────────────────────────────────────────────────────────
+const FIREBASE_CONFIG = {
+  apiKey: "AIzaSyCvLue0KkCHeI8o7O8WfIgP05hPCfufmuo",
+  authDomain: "organizacna-struktura.firebaseapp.com",
+  projectId: "organizacna-struktura",
+  storageBucket: "organizacna-struktura.firebasestorage.app",
+  messagingSenderId: "341480616184",
+  appId: "1:341480616194:web:de0e104a1b233abec2521b"
+};
+
+// ── ADMIN HESLO ── zmeň podľa potreby ─────────────────────────────────────────
+const ADMIN_PIN = 'admin';
+// ─────────────────────────────────────────────────────────────────────────────
+
+const COLORS_MAP = {
+  blue:'#deeaf9::#1a3d7a', teal:'#d5f0e6::#0e5038', purple:'#eae8fd::#3a2d8a',
+  coral:'#fde8e2::#7a2a14', amber:'#fdefd4::#6b3c08', gray:'#edecea::#3d3c39',
+  pink:'#fbe5ef::#7a2346', green:'#e0f0d4::#2a5e12'
+};
+
+let db, depts=[], emps=[], editEmpId=null, isAdmin=false;
+
+function getColor(key){
+  const raw=COLORS_MAP[key]||COLORS_MAP.gray;
+  const [bg,text]=raw.split('::');
+  return {bg,text};
+}
+function getDept(id){ return depts.find(d=>d.id===id); }
+function initials(name){
+  return (name||'').replace(/^(Ing\.|Mgr\.|Dr\.|Bc\.)\s*/i,'').split(' ').slice(0,2).map(w=>w[0]||'').join('').toUpperCase();
+}
+function showToast(msg){
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),2400);
+}
+window.closeModal = function(id){ document.getElementById(id).classList.remove('open'); }
+
+// ── Boot ───────────────────────────────────────────────────────────────────────
+firebase.initializeApp(FIREBASE_CONFIG);
+db = firebase.firestore();
+
+document.getElementById('login-screen').style.display='none';
+document.getElementById('main-app').style.display='flex';
+document.getElementById('company-name').textContent='Organizačná štruktúra';
+
+if(sessionStorage.getItem('firma_admin')==='1'){
+  isAdmin=true;
+  document.getElementById('admin-status-badge').style.display='flex';
+  document.getElementById('logout-btn').style.display='flex';
+}
+
+// Real-time listeners
+db.collection('departments').orderBy('order').onSnapshot(snap=>{
+  depts=snap.docs.map(d=>({id:d.id,...d.data()}));
+  refreshAll();
+}, ()=>{
+  db.collection('departments').get().then(snap=>{
+    depts=snap.docs.map(d=>({id:d.id,...d.data()}));
+    refreshAll();
+  });
+});
+
+db.collection('employees').onSnapshot(snap=>{
+  emps=snap.docs.map(d=>({id:d.id,...d.data()}));
+  refreshAll();
+});
+
+function refreshAll(){
+  const vd=document.getElementById('view-directory');
+  const vo=document.getElementById('view-org');
+  const va=document.getElementById('view-admin');
+  if(vd && vd.style.display!=='none') renderDirectory();
+  if(vo && vo.style.display!=='none') renderOrg();
+  if(va && va.style.display!=='none') renderAdminTables();
+}
+
+// ── Auth ──────────────────────────────────────────────────────────────────────
+window.checkPin = function(){
+  const val=document.getElementById('pin-input').value;
+  if(val===ADMIN_PIN){
+    isAdmin=true;
+    sessionStorage.setItem('firma_admin','1');
+    document.getElementById('login-screen').style.display='none';
+    document.getElementById('main-app').style.display='flex';
+    document.getElementById('admin-status-badge').style.display='flex';
+    document.getElementById('logout-btn').style.display='flex';
+    showView('admin');
+  } else {
+    document.getElementById('login-error').style.display='block';
+  }
+}
+
+window.logout = function(){
+  isAdmin=false;
+  sessionStorage.removeItem('firma_admin');
+  document.getElementById('admin-status-badge').style.display='none';
+  document.getElementById('logout-btn').style.display='none';
+  showView('directory');
+  showToast('Odhlásený/á');
+}
+
+window.adminClick = function(){
+  if(isAdmin){ showView('admin'); return; }
+  document.getElementById('main-app').style.display='none';
+  document.getElementById('login-screen').style.display='flex';
+}
+
+// ── Views ─────────────────────────────────────────────────────────────────────
+window.showView = function(v){
+  ['directory','org','admin'].forEach(x=>{
+    document.getElementById('view-'+x).style.display=x===v?'':'none';
+    const ni=document.getElementById('nav-'+x.substring(0,3));
+    if(ni) ni.classList.toggle('active',x===v);
+  });
+  if(v==='directory') renderDirectory();
+  if(v==='org') renderOrg();
+  if(v==='admin') renderAdminTables();
+}
+
+// ── Directory ─────────────────────────────────────────────────────────────────
+function renderDirectory(){
+  const q=(document.getElementById('search-input')?.value||'').toLowerCase();
+  const filtered=q?emps.filter(e=>(e.name||'').toLowerCase().includes(q)||(e.role||'').toLowerCase().includes(q)):emps;
+  const byDept={};
+  filtered.forEach(e=>{ (byDept[e.dept]=byDept[e.dept]||[]).push(e); });
+  let html='';
+  if(!depts.length && filtered.length){
+    html='<div class="cards">'+filtered.map(empCardHtml).join('')+'</div>';
+  } else {
+    depts.forEach(dept=>{
+      const list=byDept[dept.id];
+      if(!list||!list.length) return;
+      const c=getColor(dept.color||'gray');
+      html+=`<div class="dept-block"><div class="dept-header">
+        <span class="dept-pill" style="background:${c.bg};color:${c.text}">${dept.name}</span>
+        <span class="dept-head-name">${dept.head||''}</span>
+        <span class="dept-count">${list.length} os.</span>
+      </div><div class="cards">${list.map(empCardHtml).join('')}</div></div>`;
+    });
+    const noDept=filtered.filter(e=>!e.dept||!getDept(e.dept));
+    if(noDept.length){
+      html+=`<div class="dept-block"><div class="dept-header"><span class="dept-pill" style="background:#edecea;color:#3d3c39">Bez oddelenia</span></div>
+        <div class="cards">${noDept.map(empCardHtml).join('')}</div></div>`;
+    }
+  }
+  document.getElementById('dir-content').innerHTML=html||'<div class="spinner">Žiadne výsledky</div>';
+}
+
+function empCardHtml(e){
+  const d=getDept(e.dept);
+  const c=getColor(d?d.color:'gray');
+  const phones=(e.phones||[]);
+  // fallback pre staré záznamy s e.phone
+  if(!phones.length && e.phone) phones.push({type:'Mobil',number:e.phone});
+  const phoneIco=`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.15 12a19.79 19.79 0 0 1-3-8.59 2 2 0 0 1 1.99-2.18h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>`;
+  const mailIco=`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>`;
+  return `<div class="emp-card">
+    <div class="emp-avatar" style="background:${c.bg};color:${c.text}">${initials(e.name)}</div>
+    <div class="emp-name">${e.name||''}</div>
+    <div class="emp-role">${e.role||''}</div>
+    ${e.note?`<div style="font-size:11px;color:var(--text2);margin:4px 0 6px;line-height:1.4;border-left:2px solid var(--border2);padding-left:7px">${e.note}</div>`:''}
+    <div class="emp-links">
+      ${e.email?`<a class="emp-link" href="mailto:${e.email}">${mailIco}${e.email}</a>`:''}
+      ${phones.map(p=>`<a class="emp-link" href="tel:${p.number}">${phoneIco}<span style="color:var(--text3);margin-right:3px">${p.type}:</span>${p.number}</a>`).join('')}
+    </div>
+  </div>`;
+}
+
+// ── Org chart ─────────────────────────────────────────────────────────────────
+function renderOrg(){
+  if(!emps.length){document.getElementById('org-content').innerHTML='<div class="spinner">Žiadni zamestnanci</div>';return;}
+  const root=emps.find(e=>!e.manager)||emps[0];
+  function nodeHtml(e,isRoot){
+    const d=getDept(e.dept); const c=getColor(d?d.color:'gray');
+    return `<div class="org-node${isRoot?' root':''}"${isRoot?` style="border-color:${c.border||c.bg}"`:''}>
+      <div class="n">${e.name}</div><div class="r">${e.role||''}</div></div>`;
+  }
+  function buildLevel(pid){
+    const ch=emps.filter(e=>e.manager===pid);
+    if(!ch.length) return '';
+    const items=ch.map(c=>{
+      const sub=buildLevel(c.id);
+      return `<div class="org-section">${nodeHtml(c,false)}${sub?'<div class="org-vline"></div>'+sub:''}</div>`;
+    }).join('');
+    return `<div style="display:flex;flex-direction:column;align-items:center">
+      ${ch.length>1?'<div class="org-vline"></div><div class="org-hline" style="width:calc(100% - 140px)"></div>':''}
+      <div class="org-level">${items}</div></div>`;
+  }
+  document.getElementById('org-content').innerHTML=
+    `<div class="org-tree"><div class="org-section">${nodeHtml(root,true)}<div class="org-vline"></div>${buildLevel(root.id)}</div></div>`;
+}
+
+// ── Admin tables ──────────────────────────────────────────────────────────────
+function renderAdminTables(){
+  const colorNames={blue:'Modrá',teal:'Zelená',purple:'Fialová',coral:'Červená',amber:'Žltá',gray:'Sivá',pink:'Ružová',green:'Tm. zelená'};
+  let eh='';
+  emps.forEach(e=>{
+    const d=getDept(e.dept); const c=getColor(d?d.color:'gray');
+    eh+=`<tr><td>${e.name||''}</td>
+      <td>${d?`<span class="badge-dept" style="background:${c.bg};color:${c.text}">${d.name}</span>`:'—'}</td>
+      <td>${e.role||''}</td><td>${e.email||''}</td>
+      <td>${(e.phones&&e.phones.length?e.phones.map(p=>`${p.type}: ${p.number}`).join('<br>'):e.phone||'')}</td>
+      <td><div class="td-actions">
+        <button class="btn-icon" onclick="window.openEmpModal('${e.id}')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>Upraviť</button>
+        <button class="btn-icon del" onclick="window.deleteEmp('${e.id}')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/></svg>Zmazať</button>
+      </div></td></tr>`;
+  });
+  document.getElementById('emp-tbody').innerHTML=eh||'<tr><td colspan="6" style="color:var(--text3);text-align:center;padding:20px">Žiadni zamestnanci</td></tr>';
+
+  let dh='';
+  depts.forEach(d=>{
+    const c=getColor(d.color||'gray'); const cnt=emps.filter(e=>e.dept===d.id).length;
+    dh+=`<tr><td>${d.name}</td>
+      <td><span class="badge-dept" style="background:${c.bg};color:${c.text}">${colorNames[d.color]||d.color}</span></td>
+      <td>${d.head||'—'}</td><td>${cnt}</td>
+      <td><div class="td-actions">
+        <button class="btn-icon del" onclick="window.deleteDept('${d.id}',${cnt})"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>Zmazať</button>
+      </div></td></tr>`;
+  });
+  document.getElementById('dept-tbody').innerHTML=dh||'<tr><td colspan="5" style="color:var(--text3);text-align:center;padding:20px">Žiadne oddelenia</td></tr>';
+}
+
+// ── Phone rows helpers ────────────────────────────────────────────────────────
+const PHONE_TYPES=['Mobil','Pevná linka','Pracovný mobil','Fax','Iné'];
+
+window.addPhoneRow = function(type='Mobil', number=''){
+  const list=document.getElementById('phones-list');
+  const row=document.createElement('div');
+  row.style.cssText='display:flex;gap:6px;align-items:center';
+  row.innerHTML=`<select style="width:130px;padding:6px 8px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg);color:var(--text);font-size:12px;font-family:\'DM Sans\',sans-serif">
+    ${PHONE_TYPES.map(t=>`<option${t===type?' selected':''}>${t}</option>`).join('')}
+  </select>
+  <input placeholder="+421 9xx xxx xxx" value="${number}" style="flex:1;padding:6px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg);color:var(--text);font-size:13px;font-family:\'DM Sans\',sans-serif">
+  <button type="button" onclick="this.parentElement.remove()" style="padding:5px 8px;border:1px solid var(--border);border-radius:var(--radius-sm);background:transparent;color:var(--text3);cursor:pointer;font-size:14px;line-height:1">×</button>`;
+  list.appendChild(row);
+}
+
+function getPhoneRows(){
+  return [...document.querySelectorAll('#phones-list > div')].map(row=>{
+    const sel=row.querySelector('select');
+    const inp=row.querySelector('input');
+    return {type:sel?sel.value:'Mobil', number:inp?inp.value.trim():''};
+  }).filter(p=>p.number);
+}
+
+// ── Employee CRUD ─────────────────────────────────────────────────────────────
+window.openEmpModal = function(id=null){
+  editEmpId=id;
+  document.getElementById('emp-modal-title').textContent=id?'Upraviť zamestnanca':'Nový zamestnanec';
+  document.getElementById('f-dept').innerHTML=depts.map(d=>`<option value="${d.id}">${d.name}</option>`).join('');
+  document.getElementById('f-manager').innerHTML='<option value="">— bez nadriadeného —</option>'+
+    emps.filter(e=>e.id!==id).map(e=>`<option value="${e.id}">${e.name}</option>`).join('');
+  document.getElementById('phones-list').innerHTML='';
+  if(id){
+    const e=emps.find(x=>x.id===id);
+    if(e){
+      document.getElementById('f-name').value=e.name||'';
+      document.getElementById('f-role').value=e.role||'';
+      document.getElementById('f-email').value=e.email||'';
+      document.getElementById('f-note').value=e.note||'';
+      document.getElementById('f-dept').value=e.dept||'';
+      document.getElementById('f-manager').value=e.manager||'';
+      const phones=e.phones||[];
+      if(!phones.length && e.phone) phones.push({type:'Mobil',number:e.phone});
+      if(phones.length) phones.forEach(p=>addPhoneRow(p.type,p.number));
+      else addPhoneRow();
+    }
+  } else {
+    ['f-name','f-role','f-email','f-note'].forEach(x=>document.getElementById(x).value='');
+    addPhoneRow();
+  }
+  document.getElementById('overlay-emp').classList.add('open');
+}
+
+window.saveEmp = async function(){
+  const name=document.getElementById('f-name').value.trim();
+  if(!name){alert('Meno je povinné');return;}
+  const data={
+    name,
+    role:document.getElementById('f-role').value.trim(),
+    dept:document.getElementById('f-dept').value||null,
+    manager:document.getElementById('f-manager').value||null,
+    email:document.getElementById('f-email').value.trim(),
+    note:document.getElementById('f-note').value.trim(),
+    phones:getPhoneRows(),
+    phone:null
+  };
+  try{
+    if(editEmpId){ await db.collection('employees').doc(editEmpId).update(data); showToast('Uložené'); }
+    else { await db.collection('employees').add(data); showToast('Zamestnanec pridaný'); }
+    closeModal('overlay-emp');
+  }catch(e){alert('Chyba: '+e.message);}
+}
+
+window.deleteEmp = async function(id){
+  if(!confirm('Odstrániť zamestnanca?')) return;
+  await db.collection('employees').doc(id).delete();
+  const refs=emps.filter(e=>e.manager===id);
+  await Promise.all(refs.map(e=>db.collection('employees').doc(e.id).update({manager:null})));
+  showToast('Odstránené');
+}
+
+// ── Dept CRUD ─────────────────────────────────────────────────────────────────
+window.openDeptModal = function(){
+  document.getElementById('d-name').value='';
+  document.getElementById('d-head').value='';
+  document.getElementById('overlay-dept').classList.add('open');
+}
+
+window.saveDept = async function(){
+  const name=document.getElementById('d-name').value.trim();
+  if(!name){alert('Názov je povinný');return;}
+  try{
+    await db.collection('departments').add({
+      name, color:document.getElementById('d-color').value,
+      head:document.getElementById('d-head').value.trim(),
+      order:depts.length
+    });
+    showToast('Oddelenie pridané');
+    closeModal('overlay-dept');
+  }catch(e){alert('Chyba: '+e.message);}
+}
+
+window.deleteDept = async function(id,cnt){
+  if(cnt>0){alert('Najprv presuň alebo odober zamestnancov z tohto oddelenia.');return;}
+  if(!confirm('Odstrániť oddelenie?')) return;
+  await db.collection('departments').doc(id).delete();
+  showToast('Oddelenie odstránené');
+}
+</script>
+</body>
+</html>
