@@ -115,22 +115,20 @@
   .emp-link:hover { text-decoration: underline; }
   .emp-link svg { width: 11px; height: 11px; flex-shrink: 0; }
 
-  /* Org chart — hybrid H/V */
+  /* Org chart — hybrid H/V, div-based čiary */
   .org-canvas {
-    padding: 28px 32px;
-    flex: 1;
+    padding: 28px 32px 40px;
     overflow-x: scroll;
     overflow-y: auto;
+    flex: 1;
     scrollbar-width: auto;
-    scrollbar-gutter: stable;
   }
-
-  /* Karta */
+  .org-node-wrap { display: inline-flex; flex-direction: column; align-items: flex-start; }
   .org-card {
     display: inline-flex; align-items: center; gap: 9px;
     background: var(--surface); border: 1px solid var(--border);
     border-radius: var(--radius); padding: 8px 12px;
-    white-space: nowrap; cursor: default; vertical-align: top;
+    white-space: nowrap; cursor: default;
   }
   .org-card.is-root { border-color: var(--accent); border-width: 1.5px; }
   .org-avatar {
@@ -146,53 +144,13 @@
     width: 18px; height: 18px; flex-shrink: 0;
     border: 1px solid var(--border); border-radius: 4px; background: var(--bg);
     cursor: pointer; display: flex; align-items: center; justify-content: center;
-    font-size: 12px; color: var(--text3); line-height: 1; user-select: none; font-family: monospace;
+    font-size: 12px; color: var(--text3); user-select: none; font-family: monospace;
   }
   .org-toggle:hover { background: var(--surface2); }
-
-  /* Uzol — obaluje kartu + deti */
-  .org-node-wrap { display: inline-flex; flex-direction: column; align-items: flex-start; }
-
-  /* VERTIKÁLNE deti */
-  .org-v-children {
-    margin-top: 0; margin-left: 19px;
-    padding-left: 20px;
-    border-left: 1.5px solid var(--border2);
-    display: flex; flex-direction: column; gap: 8px;
-    padding-top: 8px; padding-bottom: 2px;
-  }
-  .org-v-item { position: relative; }
-  .org-v-item::before {
-    content:''; position:absolute; left:-20px; top:19px;
-    width:16px; height:1.5px; background:var(--border2);
-  }
-  /* čiarka dole z karty ku org-v-children */
-  .org-v-stem {
-    width: 1.5px; height: 8px; background: var(--border2); margin-left: 19px;
-  }
-
-  /* HORIZONTÁLNE deti */
-  .org-h-stem {
-    width: 1.5px; height: 20px; background: var(--border2); margin-left: 19px;
-  }
-  .org-h-row {
-    display: flex; flex-direction: row; align-items: flex-start;
-    gap: 14px; position: relative;
-  }
-  /* vodorovná čiara nad deťmi — pseudo na wrapper */
-  .org-h-row::before {
-    content: ''; position: absolute;
-    top: 23px; left: 19px; right: 19px;
-    height: 1.5px; background: var(--border2);
-    z-index: 0;
-  }
-  .org-h-item {
-    display: inline-flex; flex-direction: column; align-items: flex-start; position: relative; z-index: 1;
-  }
-  .org-h-item-stem {
-    width: 1.5px; height: 23px; background: var(--border2); margin-left: 19px;
-  }
-  .org-h-children { display: flex; flex-direction: column; align-items: flex-start; }
+  /* čiary ako divy */
+  .ln { background: var(--border2); flex-shrink: 0; }
+  .ln-v { width: 1.5px; }   /* zvislá */
+  .ln-h { height: 1.5px; }  /* vodorovná */
 
   /* Admin table */
   .admin-section { margin-bottom: 28px; }
@@ -588,7 +546,7 @@ function refreshAll(){
   const vo=document.getElementById('view-org');
   const va=document.getElementById('view-admin');
   if(vd && vd.style.display!=='none') renderDirectory();
-  if(vo && vo.style.display!=='none') renderOrg();
+  if(vo && vo.style.display!=='none') (window._renderOrgAndFix||renderOrg)();
   if(va && va.style.display!=='none') renderAdminTables();
 }
 
@@ -627,16 +585,13 @@ window.adminClick = function(){
 window.showView = function(v){
   ['directory','org','admin'].forEach(x=>{
     const el=document.getElementById('view-'+x);
-    if(x===v){
-      el.style.display = x==='org' ? 'flex' : '';
-    } else {
-      el.style.display='none';
-    }
+    if(x===v){ el.style.display = x==='org' ? 'flex' : ''; }
+    else { el.style.display='none'; }
     const ni=document.getElementById('nav-'+x.substring(0,3));
     if(ni) ni.classList.toggle('active',x===v);
   });
   if(v==='directory') renderDirectory();
-  if(v==='org') renderOrg();
+  if(v==='org') window._renderOrgAndFix ? window._renderOrgAndFix() : renderOrg();
   if(v==='admin') renderAdminTables();
 }
 
@@ -689,79 +644,116 @@ function empCardHtml(e){
   </div>`;
 }
 
-// ── Org chart — hybrid H/V ────────────────────────────────────────────────────
+// ── Org chart — hybrid H/V, div čiary ────────────────────────────────────────
+// Karta má padding 8px + avatar 30px → stred avatara = 8 + 15 = 23px od vrchu karty
+const CARD_MID = 23; // px — stred avatara
+const STEM_H   = 16; // px — výška krátkej zvislej čiary
+const GAP_H    = 14; // px — medzera medzi horizontálnymi deťmi
+const INDENT_V = 36; // px — odsadenie vertikálnych detí
+
 function renderOrg(){
   const el=document.getElementById('org-content');
   if(!emps.length){el.innerHTML='<div class="spinner">Žiadni zamestnanci</div>';return;}
   const root=emps.find(e=>!e.manager)||emps[0];
+  el.innerHTML=`<div style="padding-bottom:32px;display:inline-block">${buildNode(root,true)}</div>`;
+}
 
-  function cardHtml(e, isRoot){
-    const d=getDept(e.dept); const c=getColor(d?d.color:'gray');
-    const kids=emps.filter(x=>x.manager===e.id);
-    return `<div class="org-card${isRoot?' is-root':''}" data-id="${e.id}">
-      <div class="org-avatar" style="background:${c.bg};color:${c.text}">${initials(e.name)}</div>
-      <div class="org-info">
-        <div class="org-name" onclick="window.jumpToEmp('${e.id}')">${e.name||''}</div>
-        <div class="org-role">${e.role||''}</div>
+function mkCard(e, isRoot){
+  const d=getDept(e.dept); const c=getColor(d?d.color:'gray');
+  const kids=emps.filter(x=>x.manager===e.id);
+  return `<div class="org-card${isRoot?' is-root':''}" data-id="${e.id}">
+    <div class="org-avatar" style="background:${c.bg};color:${c.text}">${initials(e.name)}</div>
+    <div class="org-info">
+      <div class="org-name" onclick="window.jumpToEmp('${e.id}')">${e.name||''}</div>
+      <div class="org-role">${e.role||''}</div>
+    </div>
+    ${kids.length?`<div class="org-toggle" onclick="toggleOrg(this)">−</div>`:''}
+  </div>`;
+}
+
+function buildNode(e, isRoot){
+  const kids=emps.filter(x=>x.manager===e.id);
+  const layout=e.childLayout||'vertical';
+  const card=mkCard(e, isRoot);
+
+  if(!kids.length) return `<div class="org-node-wrap">${card}</div>`;
+
+  if(layout==='horizontal'){
+    // Zvisla čiara dolu z karty (STEM_H px)
+    // Horizontálna čiara spájajúca deti
+    // Krátka zvisla čiara nahor ku každému dieťaťu
+    const itemsHtml = kids.map(ch => `
+      <div style="display:inline-flex;flex-direction:column;align-items:flex-start">
+        <div class="ln ln-v" style="height:${STEM_H}px;margin-left:${CARD_MID - 1}px"></div>
+        ${buildNode(ch, false)}
+      </div>`).join('');
+
+    // wrapper pre horizontálnu čiaru + deti
+    return `<div class="org-node-wrap">
+      ${card}
+      <div class="org-h-children" style="display:flex;flex-direction:column;align-items:flex-start">
+        <div class="ln ln-v" style="height:${STEM_H}px;margin-left:${CARD_MID - 1}px"></div>
+        <div class="org-h-row" style="display:inline-flex;flex-direction:row;align-items:flex-start;gap:${GAP_H}px;position:relative">
+          <div class="ln ln-h org-h-hline" style="position:absolute;top:0;height:1.5px;background:var(--border2)" data-hline="1"></div>
+          ${itemsHtml}
+        </div>
       </div>
-      ${kids.length?`<div class="org-toggle" onclick="toggleOrg(this)">−</div>`:''}
+    </div>`;
+  } else {
+    // Vertikálne — deti pod sebou s čiarou vľavo
+    const itemsHtml = kids.map(ch => `
+      <div style="display:flex;flex-direction:row;align-items:flex-start">
+        <div style="display:flex;flex-direction:column;align-items:center">
+          <div class="ln ln-h" style="width:${INDENT_V - CARD_MID}px;margin-top:${CARD_MID - 1}px"></div>
+        </div>
+        ${buildNode(ch, false)}
+      </div>`).join('');
+
+    return `<div class="org-node-wrap">
+      ${card}
+      <div class="org-v-children" style="display:flex;flex-direction:row;align-items:flex-start">
+        <div class="ln ln-v org-v-vline" style="width:1.5px;align-self:stretch;margin-left:${CARD_MID - 1}px;margin-top:0"></div>
+        <div style="display:flex;flex-direction:column;gap:8px;padding-top:8px;padding-bottom:4px">
+          ${itemsHtml}
+        </div>
+      </div>
     </div>`;
   }
-
-  function buildNode(e, isRoot){
-    const kids=emps.filter(x=>x.manager===e.id);
-    const layout=e.childLayout||'vertical';
-
-    if(!kids.length){
-      return `<div class="org-node-wrap">${cardHtml(e,isRoot)}</div>`;
-    }
-
-    if(layout==='horizontal'){
-      const itemsHtml=kids.map(ch=>`
-        <div class="org-h-item">
-          <div class="org-h-item-stem"></div>
-          ${buildNode(ch,false)}
-        </div>`).join('');
-      return `<div class="org-node-wrap">
-        ${cardHtml(e,isRoot)}
-        <div class="org-h-children">
-          <div class="org-h-stem"></div>
-          <div class="org-h-row">${itemsHtml}</div>
-        </div>
-      </div>`;
-    } else {
-      const itemsHtml=kids.map(ch=>`
-        <div class="org-v-item">${buildNode(ch,false)}</div>`).join('');
-      return `<div class="org-node-wrap">
-        ${cardHtml(e,isRoot)}
-        <div class="org-v-stem"></div>
-        <div class="org-v-children">${itemsHtml}</div>
-      </div>`;
-    }
-  }
-
-  el.innerHTML=`<div style="padding-bottom:32px;display:inline-block;min-width:100%">${buildNode(root,true)}</div>`;
 }
 
 window.toggleOrg = function(btn){
-  const card=btn.closest('.org-card');
-  const wrap=card.nextElementSibling; // org-h-children alebo org-v-stem
-  if(!wrap) return;
-  // pre vertikálne: stem + children, pre horizontálne: org-h-children
-  const isH=wrap.classList.contains('org-h-children');
-  const isVStem=wrap.classList.contains('org-v-stem');
-  if(isH){
-    const collapsed=wrap.style.display==='none';
-    wrap.style.display=collapsed?'':'none';
-    btn.textContent=collapsed?'−':'+';
-  } else if(isVStem){
-    const children=wrap.nextElementSibling;
-    const collapsed=wrap.style.display==='none';
-    wrap.style.display=collapsed?'':'none';
-    if(children) children.style.display=collapsed?'':'none';
-    btn.textContent=collapsed?'−':'+';
-  }
+  const card = btn.closest('.org-card');
+  const wrap = card.parentElement; // org-node-wrap
+  // Nájdi všetky súrodenské elementy za kartou
+  const children = [...wrap.children].slice(1); // všetko okrem karty
+  const hidden = children[0] && children[0].style.display === 'none';
+  children.forEach(c => c.style.display = hidden ? '' : 'none');
+  btn.textContent = hidden ? '−' : '+';
 }
+
+// Po renderi nastav šírku horizontálnej čiary
+function fixHlines(){
+  document.querySelectorAll('[data-hline]').forEach(line => {
+    const row = line.parentElement;
+    if(!row) return;
+    const items = [...row.children].filter(c => !c.dataset.hline);
+    if(items.length < 2) { line.style.display='none'; return; }
+    const first = items[0].getBoundingClientRect();
+    const last  = items[items.length-1].getBoundingClientRect();
+    const row_r = row.getBoundingClientRect();
+    const left  = first.left - row_r.left + CARD_MID - 1;
+    const right = last.left  - row_r.left + CARD_MID;
+    line.style.left  = left + 'px';
+    line.style.width = (right - left) + 'px';
+    line.style.top   = '0px';
+  });
+}
+
+const _origRenderOrg = renderOrg;
+window._renderOrgAndFix = function(){
+  _origRenderOrg();
+  requestAnimationFrame(fixHlines);
+};
 
 // ── Admin tables ──────────────────────────────────────────────────────────────
 function renderAdminTables(){
